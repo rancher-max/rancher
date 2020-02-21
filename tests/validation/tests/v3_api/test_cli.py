@@ -13,6 +13,8 @@ if_test_multicluster = pytest.mark.skipif(
     not AWS_ACCESS_KEY_ID or ast.literal_eval(
         os.environ.get('SKIP_MULTICLUSTER', "False")),
     reason='Multi-Cluster tests are skipped in the interest of time/cost.')
+print("Skipping multicluster?? {}".format(ast.literal_eval(
+        os.environ.get('SKIP_MULTICLUSTER', "False"))))
 
 
 def test_context_switching(rancher_cli: RancherCli):
@@ -86,6 +88,7 @@ def test_app_management(remove_cli_resource, rancher_cli: RancherCli):
 def test_multiclusterapp_management(custom_cluster, remove_cli_resource,
                                     admin_cli: RancherCli):
     admin_cli.log.info("Testing Multi-Cluster Apps")
+    assert False
 
     # Get list of projects to use and ensure that it is 2 or greater
     client = get_admin_client()
@@ -151,6 +154,7 @@ def custom_cluster(request, rancher_cli):
                          "as this takes some time...")
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
+    return "not doing it"
     cluster, aws_nodes = create_and_validate_custom_host(
         node_roles, random_cluster_name=True)
 
