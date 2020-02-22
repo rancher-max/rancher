@@ -11,10 +11,10 @@ from .common import (ADMIN_TOKEN, USER_TOKEN, CATTLE_TEST_URL, CLUSTER_NAME,
 
 if_test_multicluster = pytest.mark.skipif(
     not AWS_ACCESS_KEY_ID or ast.literal_eval(
-        os.environ.get('SKIP_MULTICLUSTER', "False")),
+        os.environ.get('RANCHER_SKIP_MULTICLUSTER', "False")),
     reason='Multi-Cluster tests are skipped in the interest of time/cost.')
 print("Skipping multicluster?? {}".format(ast.literal_eval(
-        os.environ.get('SKIP_MULTICLUSTER', "True"))))
+        os.environ.get('RANCHER_SKIP_MULTICLUSTER', "False"))))
 
 
 def test_context_switching(rancher_cli: RancherCli):

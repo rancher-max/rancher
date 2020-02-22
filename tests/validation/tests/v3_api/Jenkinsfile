@@ -65,7 +65,7 @@ node {
           stage('Run Validation Tests') {
             try {
               echo "env env env env env"
-              sh "docker run --name ${testContainer}  --env-file .env " +
+              sh "docker run --rm --name ${testContainer}  --env-file .env " +
                 "${imageName} env"
               sh "docker run --name ${testContainer}  --env-file .env " +
                 "${imageName} /bin/bash -c \'pytest -v -s --junit-xml=${testResultsOut} ${PYTEST_OPTIONS} ${testsDir}\'"
