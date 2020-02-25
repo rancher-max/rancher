@@ -7,7 +7,8 @@ from .test_rke_cluster_provisioning import (create_and_validate_custom_host,
 from .cli_objects import RancherCli
 from .common import (ADMIN_TOKEN, USER_TOKEN, CATTLE_TEST_URL, CLUSTER_NAME,
                      AWS_ACCESS_KEY_ID, get_admin_client, get_user_client,
-                     get_user_client_and_cluster)
+                     get_user_client_and_cluster, random_str,
+                     get_project_client_for_token)
 
 if_test_multicluster = pytest.mark.skipif(
     not AWS_ACCESS_KEY_ID or ast.literal_eval(
@@ -142,6 +143,73 @@ def test_catalog(admin_cli: RancherCli):
     assert catalog is not None
     deleted = admin_cli.catalogs.delete(catalog["name"])
     assert deleted
+
+
+@if_test_multicluster
+def test_cluster_removal(custom_cluster, admin_cli: RancherCli):
+    admin_cli.log.info("Testing Cluster Removal")
+    deleted = admin_cli.clusters.delete(custom_cluster.name)
+    assert deleted
+
+
+def test_inspection(rancher_cli: RancherCli):
+    rancher_cli.log.info("Testing Inspect Resource")
+    resource = rancher_cli.inspect(
+        "project", rancher_cli.default_project["id"],
+        format="{{.clusterId}}|{{.id}}|{{.type}}|{{.state}}")
+    assert resource is not None
+    resource_arr = resource.split("|")
+    assert resource_arr[0] == rancher_cli.default_project["clusterId"]
+    assert resource_arr[1] == rancher_cli.default_project["id"]
+    assert resource_arr[2] == "project"
+    assert resource_arr[3] == "active"
+
+
+def test_ps(custom_workload, rancher_cli: RancherCli):
+    rancher_cli.log.info("Testing rancher ps")
+    rancher_cli.switch_context(rancher_cli.DEFAULT_CONTEXT)
+    ps = rancher_cli.ps()
+    expected_value = "{}|{}|nginx|2".format(
+        rancher_cli.default_namespace, custom_workload.name)
+    assert expected_value in ps.splitlines()
+
+
+def test_kubectl(custom_workload, rancher_cli: RancherCli):
+    rancher_cli.log.info("Testing kubectl commands from the CLI")
+    rancher_cli.switch_context(rancher_cli.DEFAULT_CONTEXT)
+    jsonpath = "-o jsonpath='{.spec.template.spec.containers[0].image}'"
+    result = rancher_cli.kubectl("get deploy -n {} {} {}".format(
+        rancher_cli.default_namespace, custom_workload.name, jsonpath))
+    assert result == "nginx"
+
+
+# Note this expects nodes not to be Windows due to usage of ifconfig.me
+def test_ssh(rancher_cli: RancherCli):
+    rancher_cli.log.info("Testing ssh into nodes.")
+    rancher_cli.switch_context(rancher_cli.DEFAULT_CONTEXT)
+    nodes = rancher_cli.nodes.get()
+    rancher_cli.log.debug("Nodes is: {}".format(nodes))
+
+    for node in nodes:
+        ip = rancher_cli.nodes.ssh(node, "curl -s ifconfig.me")
+        assert node["ip"] == ip
+
+
+@pytest.fixture(scope='module')
+def custom_workload(rancher_cli):
+    client, cluster = get_user_client_and_cluster()
+    project = client.list_project(name=rancher_cli.default_project["name"],
+                                  clusterId=cluster.id).data[0]
+    p_client = get_project_client_for_token(project, USER_TOKEN)
+    workload = p_client.create_workload(
+        name=random_str(),
+        namespaceId=rancher_cli.default_namespace,
+        scale=2,
+        containers=[{
+            'name': 'one',
+            'image': 'nginx',
+        }])
+    return workload
 
 
 @pytest.fixture(scope='module')
