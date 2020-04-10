@@ -592,7 +592,8 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
           username + " " + str(expected_status))
 
 
-def enable_ad(username, token, expected_status=200):
+def enable_ad(username, token,
+              password=PASSWORD, nested=False, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     activeDirectoryConfig = {
         "accessMode": "unrestricted",
@@ -605,7 +606,7 @@ def enable_ad(username, token, expected_status=200):
         "groupNameAttribute": "name",
         "groupObjectClass": "group",
         "groupSearchAttribute": "sAMAccountName",
-        "nestedGroupMembershipEnabled": False,
+        "nestedGroupMembershipEnabled": nested,
         "port": PORT,
         "servers": [HOSTNAME_OR_IP_ADDRESS],
         "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
@@ -627,7 +628,7 @@ def enable_ad(username, token, expected_status=200):
                       json={"activeDirectoryConfig": activeDirectoryConfig,
                             "enabled": True,
                             "username": username,
-                            "password": PASSWORD},
+                            "password": password},
                       verify=False, headers=headers)
     assert r.status_code == expected_status
     print("Enable ActiveDirectory request for " +

@@ -9,9 +9,11 @@ from subprocess import CalledProcessError
 
 from rancher import ApiError
 
-from .common import add_role_to_user
+from .test_auth import enable_ad
+from .common import add_role_to_user, AUTH_USERNAME, AUTH_PASSWORD
 from .common import auth_get_user_token
 from .common import auth_resource_cleanup
+from .common import AUTH_PROVIDER_NAME
 from .common import AUTH_USER_PASSWORD
 from .common import apply_crd
 from .common import check_condition
@@ -46,6 +48,7 @@ from .common import rbac_get_namespace
 from .common import rbac_get_user_token_by_role
 from .common import requests
 from .common import run_command as run_command_common
+from .common import ADMIN_TOKEN
 from .common import USER_TOKEN
 from .common import validate_all_workload_image_from_rancher
 from .common import wait_for_condition
@@ -132,6 +135,39 @@ def test_istio_resources():
     create_and_test_bookinfo_routing(app_client, app_ns, gateway_url)
 
 
+def test_istio_deployment_options():
+    file_path = ISTIO_PATH + '/nginx-custom-sidecar.yaml'
+    expected_image = "rancher/istio-proxyv2:1.4.3"
+    p_client = namespace["app_client"]
+    ns = namespace["app_ns"]
+
+    execute_kubectl_cmd('apply -f ' + file_path + ' -n ' + ns.name, False)
+    result = execute_kubectl_cmd('get deployment -n ' + ns.name, True)
+
+    for deployment in result['items']:
+        wl = p_client.list_workload(id='deployment:'
+                                       + deployment['metadata']['namespace']
+                                       + ':'
+                                       + deployment['metadata']['name']).data[
+            0]
+        wl = wait_for_wl_to_active(p_client, wl, 60)
+        wl_pods = wait_for_pods_in_workload(p_client, wl, 1)
+        wait_for_pod_to_running(p_client, wl_pods[0])
+    workload = p_client.list_workload(name="nginx-v1",
+                                      namespaceId=ns.id).data[0]
+    pod = p_client.list_pod(workloadId=workload.id).data[0]
+    try:
+        assert any(container.image == expected_image
+                   for container in pod.containers)
+    except AssertionError as e:
+        retrieved_images = ""
+        for container in pod.containers:
+            retrieved_images += container.image + " "
+        retrieved_images = retrieved_images.strip().split(" ")
+        raise AssertionError("None of {} matches '{}'".format(
+            retrieved_images, expected_image))
+
+
 # Enables all possible istio custom answers with the exception of certmanager
 def test_istio_custom_answers(skipif_unsupported_istio_version,
                               enable_all_options_except_certmanager):
@@ -153,7 +189,9 @@ def test_istio_custom_answers(skipif_unsupported_istio_version,
 def test_istio_certmanager_enables(skipif_unsupported_istio_version,
                                    enable_certmanager):
     expected_deployments = [
-        "certmanager"
+        "certmanager", "istio-citadel", "istio-galley", "istio-ingressgateway",
+        "istio-pilot", "istio-policy", "istio-sidecar-injector",
+        "istio-telemetry", "istio-tracing", "kiali"
     ]
     validate_all_workload_image_from_rancher(
         get_system_client(USER_TOKEN), namespace["system_ns"],
@@ -823,7 +861,8 @@ def update_answers():
             }
             answers.update(additional_answers)
         elif answer_type == "allow_group_access":
-            group_id = get_group_principal_id(group)
+            auth_admin = login_as_auth_user(AUTH_USERNAME, AUTH_PASSWORD)
+            group_id = get_group_principal_id(group, token=auth_admin['token'])
             additional_answers = {
                 "global.members[0].kind": "Group",
                 "global.members[0].name": group_id,
@@ -906,6 +945,11 @@ def create_project_client(request):
     global ISTIO_EXTERNAL_ID
     client, cluster = get_user_client_and_cluster()
     create_kubeconfig(cluster)
+
+    if AUTH_PROVIDER_NAME == "activeDirectory":
+        enable_ad(AUTH_USERNAME, ADMIN_TOKEN,
+                  AUTH_PASSWORD, NESTED_GROUP_ENABLED)
+
     projects = client.list_project(name='System', clusterId=cluster.id)
     if len(projects.data) == 0:
         raise AssertionError(

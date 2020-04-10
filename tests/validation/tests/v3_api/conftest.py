@@ -16,6 +16,7 @@ def pytest_unconfigure(config):
     if TEST_RBAC and CATTLE_TEST_URL:
         rbac_cleanup()
 
+
 @pytest.fixture
 def remove_resource(request):
     """Remove a resource after a test finishes even if the test fails.
