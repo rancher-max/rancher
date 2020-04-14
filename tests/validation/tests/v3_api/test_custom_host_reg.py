@@ -66,16 +66,12 @@ def test_deploy_rancher_server():
     env_details += "env.ADMIN_TOKEN='" + token + "'\n"
     env_details += "env.USER_TOKEN='" + user_token + "'\n"
 
-    if AUTH_PROVIDER_NAME == "activeDirectory":
-        os.environ["CATTLE_TEST_URL"] = RANCHER_SERVER_URL
-        os.environ["ADMIN_TOKEN"] = token
-        print("Environment Variables:")
-        for k, v in os.environ.items():
-            print("{} = {}".format(k, v))
-        print("-----------------------------------------------")
+    if AUTH_PROVIDER == "activeDirectory":
+        enable_url = RANCHER_SERVER_URL + "/v3/" + AUTH_PROVIDER + \
+            "Configs/" + AUTH_PROVIDER.lower() + "?action=testAndApply"
         auth_admin_user = load_setup_data()["admin_user"]
-        enable_ad(auth_admin_user, ADMIN_TOKEN, AUTH_USER_PASSWORD,
-                  NESTED_GROUP_ENABLED)
+        enable_ad(auth_admin_user, token, enable_url=enable_url,
+                  password=AUTH_USER_PASSWORD, nested=NESTED_GROUP_ENABLED)
 
     if AUTO_DEPLOY_CUSTOM_CLUSTER:
         aws_nodes = \

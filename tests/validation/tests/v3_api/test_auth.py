@@ -4,8 +4,6 @@ import os
 
 from .common import *  # NOQA
 
-AUTH_PROVIDER = os.environ.get('RANCHER_AUTH_PROVIDER', "")
-
 '''
 Prerequisite:
 1. Set up auth, make testautoadmin as your admin user
@@ -592,7 +590,7 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
           username + " " + str(expected_status))
 
 
-def enable_ad(username, token,
+def enable_ad(username, token, enable_url=CATTLE_AUTH_ENABLE_URL,
               password=PASSWORD, nested=False, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     activeDirectoryConfig = {
@@ -624,7 +622,7 @@ def enable_ad(username, token,
     ca_cert = activeDirectoryConfig["certificate"]
     activeDirectoryConfig["certificate"] = ca_cert.replace('\\n', '\n')
 
-    r = requests.post(CATTLE_AUTH_ENABLE_URL,
+    r = requests.post(enable_url,
                       json={"activeDirectoryConfig": activeDirectoryConfig,
                             "enabled": True,
                             "username": username,

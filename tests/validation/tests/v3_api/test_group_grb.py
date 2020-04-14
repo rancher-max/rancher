@@ -305,9 +305,9 @@ def create_project_client(request):
     client, cluster = get_user_client_and_cluster()
     create_kubeconfig(cluster)
 
-    if AUTH_PROVIDER_NAME == "activeDirectory":
-        enable_ad(AUTH_ADMIN_USER, ADMIN_TOKEN, AUTH_USER_PASSWORD,
-                  NESTED_GROUP_ENABLED)
+    if AUTH_PROVIDER == "activeDirectory":
+        enable_ad(AUTH_ADMIN_USER, ADMIN_TOKEN,
+                  password=AUTH_USER_PASSWORD, nested=NESTED_GROUP_ENABLED)
 
     if NESTED_GROUP_ENABLED:
         assert is_nested(), "no nested group is found"

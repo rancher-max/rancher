@@ -8,7 +8,7 @@ urllib3.disable_warnings()
 def pytest_configure(config):
     if TEST_RBAC and CATTLE_TEST_URL:
         rbac_prepare()
-    if AUTH_PROVIDER_NAME != "":
+    if AUTH_PROVIDER != "":
         prepare_auth_data()
 
 

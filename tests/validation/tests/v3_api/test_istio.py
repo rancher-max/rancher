@@ -13,7 +13,7 @@ from .test_auth import enable_ad, load_setup_data
 from .common import add_role_to_user
 from .common import auth_get_user_token
 from .common import auth_resource_cleanup
-from .common import AUTH_PROVIDER_NAME
+from .common import AUTH_PROVIDER
 from .common import AUTH_USER_PASSWORD
 from .common import apply_crd
 from .common import check_condition
@@ -949,9 +949,9 @@ def create_project_client(request):
     client, cluster = get_user_client_and_cluster()
     create_kubeconfig(cluster)
 
-    if AUTH_PROVIDER_NAME == "activeDirectory":
-        enable_ad(AUTH_ADMIN_USER, ADMIN_TOKEN, AUTH_USER_PASSWORD,
-                  NESTED_GROUP_ENABLED)
+    if AUTH_PROVIDER == "activeDirectory":
+        enable_ad(AUTH_ADMIN_USER, ADMIN_TOKEN, 
+                  password=AUTH_USER_PASSWORD, nested=NESTED_GROUP_ENABLED)
 
     projects = client.list_project(name='System', clusterId=cluster.id)
     if len(projects.data) == 0:
