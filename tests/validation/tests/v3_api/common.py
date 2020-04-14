@@ -159,12 +159,10 @@ if AUTH_PROVIDER_NAME not in ["activeDirectory", "freeIpa", "openLdap", ""]:
                 "activeDirectory, freeIpa, or openLdap (case sensitive).")
 NESTED_GROUP_ENABLED = ast.literal_eval(
     os.environ.get('RANCHER_NESTED_GROUP_ENABLED', "False"))
-# the shared password for all auth users
+# Admin Auth username and the shared password for all auth users
+AUTH_ADMIN_USERNAME = os.environ.get("RANCHER_AUTH_USERNAME")
 AUTH_USER_PASSWORD = os.environ.get('RANCHER_AUTH_USER_PASSWORD', "")
 
-# Admin Auth Info
-AUTH_USERNAME = os.environ.get("RANCHER_AUTH_USERNAME")
-AUTH_PASSWORD = os.environ.get("RANCHER_AUTH_PASSWORD")
 
 # the link to log in as an auth user
 LOGIN_AS_AUTH_USER_URL = \

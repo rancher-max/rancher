@@ -49,7 +49,7 @@ node {
                       string(credentialsId: 'RANCHER_SERVICE_ACCOUNT_PASSWORD', variable: 'RANCHER_SERVICE_ACCOUNT_PASSWORD'),
                       string(credentialsId: 'RANCHER_USER_SEARCH_BASE', variable: 'RANCHER_USER_SEARCH_BASE'),
                       string(credentialsId: 'RANCHER_AUTH_USERNAME', variable: 'RANCHER_AUTH_USERNAME'),
-                      string(credentialsId: 'RANCHER_AUTH_PASSWORD', variable: 'RANCHER_AUTH_PASSWORD')]) {
+                      string(credentialsId: 'RANCHER_DEFAULT_LOGIN_DOMAIN', variable: 'RANCHER_DEFAULT_LOGIN_DOMAIN')]) {
                         
       stage('Checkout') {
         deleteDir()

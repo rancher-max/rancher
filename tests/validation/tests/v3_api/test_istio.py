@@ -9,8 +9,8 @@ from subprocess import CalledProcessError
 
 from rancher import ApiError
 
-from .test_auth import enable_ad
-from .common import add_role_to_user, AUTH_USERNAME, AUTH_PASSWORD
+from .test_auth import enable_ad, load_setup_data
+from .common import add_role_to_user
 from .common import auth_get_user_token
 from .common import auth_resource_cleanup
 from .common import AUTH_PROVIDER_NAME
@@ -82,6 +82,8 @@ DEFAULT_ANSWERS = {
 namespace = {"app_client": None, "app_ns": None, "gateway_url": None,
              "system_ns": None, "system_project": None,
              "istio_version": None, "istio_app": None}
+
+AUTH_ADMIN_USER = load_setup_data()["admin_user"]
 
 crd_test_data = [
     ("policy.authentication.istio.io", "authenticationpolicy.yaml"),
@@ -861,7 +863,8 @@ def update_answers():
             }
             answers.update(additional_answers)
         elif answer_type == "allow_group_access":
-            auth_admin = login_as_auth_user(AUTH_USERNAME, AUTH_PASSWORD)
+            auth_admin = login_as_auth_user(AUTH_ADMIN_USER,
+                                            AUTH_USER_PASSWORD)
             group_id = get_group_principal_id(group, token=auth_admin['token'])
             additional_answers = {
                 "global.members[0].kind": "Group",
@@ -947,8 +950,8 @@ def create_project_client(request):
     create_kubeconfig(cluster)
 
     if AUTH_PROVIDER_NAME == "activeDirectory":
-        enable_ad(AUTH_USERNAME, ADMIN_TOKEN,
-                  AUTH_PASSWORD, NESTED_GROUP_ENABLED)
+        enable_ad(AUTH_ADMIN_USER, ADMIN_TOKEN, AUTH_USER_PASSWORD,
+                  NESTED_GROUP_ENABLED)
 
     projects = client.list_project(name='System', clusterId=cluster.id)
     if len(projects.data) == 0:
