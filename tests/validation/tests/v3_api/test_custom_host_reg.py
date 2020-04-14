@@ -67,6 +67,7 @@ def test_deploy_rancher_server():
     env_details += "env.USER_TOKEN='" + user_token + "'\n"
 
     if AUTH_PROVIDER_NAME == "activeDirectory":
+        os.environ["CATTLE_TEST_URL"] = RANCHER_SERVER_URL
         auth_admin_user = load_setup_data()["admin_user"]
         enable_ad(auth_admin_user, ADMIN_TOKEN, AUTH_USER_PASSWORD,
                   NESTED_GROUP_ENABLED)
