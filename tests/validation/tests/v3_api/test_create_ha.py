@@ -67,6 +67,10 @@ def test_install_rancher_ha(precheck_certificate_options):
 
     if cm_install:
         install_cert_manager()
+    apply_clusterissuer_cmd = "kubectl apply -f " + \
+                              DATA_SUBDIR + "/clusterissuer.yaml"
+    run_command_with_stderr(apply_clusterissuer_cmd)
+
     add_repo_create_namespace()
     install_rancher()
     wait_until_active(url=RANCHER_SERVER_URL)
@@ -163,7 +167,10 @@ def install_cert_manager():
         "helm_v3 repo add jetstack https://charts.jetstack.io && " + \
         "helm_v3 repo update && " + \
         "helm_v3 install cert-manager jetstack/cert-manager " + \
-        "--namespace cert-manager --version v0.12.0"
+        "--namespace cert-manager --version v0.12.0" + \
+        "--set ingressShim.defaultIssuerName=letsencrypt-staging" + \
+        "--set ingressShim.defaultIssuerKind=ClusterIssuer" + \
+        "--set ingressShim.defaultIssuerGroup=cert-manager.io"
 
     run_command_with_stderr(helm_certmanager_cmd)
     time.sleep(120)
