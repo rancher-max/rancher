@@ -167,9 +167,9 @@ def install_cert_manager():
         "helm_v3 repo add jetstack https://charts.jetstack.io && " + \
         "helm_v3 repo update && " + \
         "helm_v3 install cert-manager jetstack/cert-manager " + \
-        "--namespace cert-manager --version v0.12.0" + \
-        "--set ingressShim.defaultIssuerName=letsencrypt-staging" + \
-        "--set ingressShim.defaultIssuerKind=ClusterIssuer" + \
+        "--namespace cert-manager --version v0.12.0 " + \
+        "--set ingressShim.defaultIssuerName=letsencrypt-staging " + \
+        "--set ingressShim.defaultIssuerKind=ClusterIssuer " + \
         "--set ingressShim.defaultIssuerGroup=cert-manager.io"
 
     run_command_with_stderr(helm_certmanager_cmd)
