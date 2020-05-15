@@ -67,8 +67,8 @@ def test_install_rancher_ha(precheck_certificate_options):
 
     if cm_install:
         install_cert_manager()
-    apply_clusterissuer_cmd = "kubectl apply -f " + \
-                              DATA_SUBDIR + "/clusterissuer.yaml"
+    apply_clusterissuer_cmd = "kubectl apply -f " + os.path.abspath(
+        DATA_SUBDIR + "/clusterissuer.yaml")
     run_command_with_stderr(apply_clusterissuer_cmd)
 
     add_repo_create_namespace()
