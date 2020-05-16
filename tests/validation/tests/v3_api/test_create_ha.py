@@ -68,21 +68,21 @@ def test_install_rancher_ha(precheck_certificate_options):
     if cm_install:
         install_cert_manager()
     apply_clusterissuer_cmd = "cat <<EOF | kubectl apply -f - " + """
-    apiVersion: cert-manager.io/v1alpha2
-    kind: ClusterIssuer
-    metadata:
-      name: letsencrypt-staging
-    spec:
-      acme:
-        email: me@somefakeemail.com
-        server: https://acme-staging-v02.api.letsencrypt.org/directory
-        privateKeySecretRef:
-          name: example-issuer-account-key
-        solvers:
-        - http01:
-            ingress:
-              class: nginx
-    EOF"""
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    email: me@somefakeemail.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: example-issuer-account-key
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF"""
     run_command_with_stderr(apply_clusterissuer_cmd)
 
     add_repo_create_namespace()
