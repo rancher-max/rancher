@@ -254,7 +254,6 @@ def setEnvFromParams() {
 // Enforce that the params in `requiredParams` are present
 def checkParams() {
   requiredParams = ["RANCHER_SERVER_VERSION":RANCHER_SERVER_VERSION,
-                    "RANCHER_SERVER_VERSION_UPGRADE":RANCHER_SERVER_VERSION_UPGRADE,
                     "PREUPGRADE_BRANCH":PREUPGRADE_BRANCH,
                     "POSTUPGRADE_BRANCH":POSTUPGRADE_BRANCH,
                     "RANCHER_CLUSTER_NAME":RANCHER_CLUSTER_NAME]
@@ -271,6 +270,22 @@ def checkParams() {
       currentBuild.result = 'ABORTED'
     }
   }
+
+  oneOfParams = ["RANCHER_SERVER_VERSION_UPGRADE":RANCHER_SERVER_VERSION_UPGRADE,
+                 "RANCHER_KDM_BRANCH":RANCHER_KDM_BRANCH]
+  oneOfProvided = false
+
+  oneOfParams.each { param, paramValue ->
+    if (paramValue != "") {
+      oneOfProvided = true
+    }
+  }
+
+  if (!oneOfProvided) {
+      error "One of the params for ${oneOfParams} must be provided! Aborting."
+      currentBuild.result = 'Aborted'
+  }
+
 }
 
 def buildContainer() {
