@@ -229,6 +229,11 @@ def test_rancher_upgrade():
     upgrade_rancher_server(CATTLE_TEST_URL)
     client = get_user_client()
     version = client.list_setting(name="server-version").data[0].value
+    # Ignore the middle build number in master-head and vY.X-head
+    version_arr = version.split("-")
+    if version_arr[-1] == "head":
+        version = "-".join([version_arr[0], version_arr[-1]])
+
     assert version == upgradeVersion
 
 

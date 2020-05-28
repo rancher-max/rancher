@@ -115,7 +115,12 @@ node {
         dir ("tests/validation") {
           stage('Rebuild / Run Upgrade') {
             buildContainer()
-            upgradeRancher()
+            if (RANCHER_SERVER_VERSION_UPGRADE != "") {
+              upgradeRancher()
+            }
+            if (RANCHER_KDM_BRANCH != "") {
+              upgradeKdm()
+            }
           }
 
           stage('Run postupgrade tests') {
@@ -441,6 +446,34 @@ def runPreupgradeTests(def cluster, def validate, def create) {
     echo "Error: " + err
     echo "Preupgrade tests failed"
     currentBuild.result = 'UNSTABLE'
+  } finally {
+    collectReports()
+    containerCleanup()
+  }
+}
+
+def upgradeKdm() {
+  try {
+    def reportName = "upgradekdm"
+    htmlString = "--html=reports/${reportName}.html"
+
+    // Set the upgrade-specific variables for pre-upgrade
+    sh "docker run --name ${containerName} -t --env-file .env " +
+        "${imageName} /bin/bash -c \'" +
+        "export CATTLE_TEST_URL=${CATTLE_TEST_URL} && " +
+        "export ADMIN_TOKEN=${ADMIN_TOKEN} && " +
+        "export USER_TOKEN=${USER_TOKEN} && " +
+        "export RANCHER_KDM_BRANCH=${RANCHER_KDM_BRANCH} && " +
+        "export RANCHER_KDM_URL=${RANCHER_KDM_URL} && " +
+        "pytest -v -s -k test_upgrade_kdm ${testsDir} " +
+        "--junit-xml=reports/${reportName}.xml " +
+        "${htmlString}\'"
+
+  } catch(err) {
+    buildFail = true
+    echo "Error: " + err
+    echo "Upgrade kdm failed"
+    currentBuild.result = 'FAILURE'
   } finally {
     collectReports()
     containerCleanup()

@@ -1,5 +1,6 @@
 from copy import deepcopy
 import os
+import pytest
 import requests
 from .common import json
 from .common import CATTLE_API_URL
@@ -25,6 +26,15 @@ PLUGIN = ["calico", "canal", "flannel", "weave"]
 CLUSTER_LIST = []
 NODE_COUNT_KDM_CLUSTER = \
     int(os.environ.get("RANCHER_NODE_COUNT_KDM_CLUSTER", 4))
+
+KDM_BRANCH = os.environ.get('RANCHER_KDM_BRANCH', "")
+KDM_URL = os.environ.get(
+    "RANCHER_KDM_URL",
+    "https://github.com/rancher/kontainer-driver-metadata.git")
+
+skipif_no_kdm_branch = pytest.mark.skipif(
+    KDM_BRANCH == "",
+    reason="Did not supply KDM Branch so skipping KDM update test.")
 
 
 def test_clusters_for_kdm():
@@ -117,6 +127,11 @@ def test_clusters_for_kdm():
                                      "Check logs for more info"
 
 
+@skipif_no_kdm_branch
+def test_update_kdm_data():
+    update_and_validate_kdm_data()
+
+
 def validate_custom_cluster_kdm(cluster, aws_nodes):
     if NODE_COUNT_KDM_CLUSTER == 4:
         node_roles = [["controlplane"], ["etcd"], ["worker"], ["worker"]]
@@ -135,3 +150,27 @@ def validate_custom_cluster_kdm(cluster, aws_nodes):
             aws_node.roles.append(nr)
         aws_node.execute_command(docker_run_cmd)
         i += 1
+
+
+def update_and_validate_kdm_data(url=KDM_URL, branch=KDM_BRANCH):
+    print("Updating KDM to use {}/tree/{}".format(url, branch))
+    header = {'Authorization': 'Bearer ' + ADMIN_TOKEN}
+    kdm_url = CATTLE_API_URL + "/settings/rke-metadata-config"
+    kdm_json = {
+        "name": "rke-metadata-config",
+        "value": json.dumps({
+            "branch": branch,
+            "refresh-interval-minutes": "1440",
+            "url": url
+        })
+    }
+    r = requests.put(kdm_url, verify=False, headers=header, json=kdm_json)
+    r_content = json.loads(r.content)
+    assert r.ok
+    assert r_content['name'] == kdm_json['name']
+    assert r_content['value'] == kdm_json['value']
+
+    # Refresh Kubernetes Metadata
+    kdm_refresh_url = CATTLE_API_URL + "/kontainerdrivers?action=refresh"
+    response = requests.post(kdm_refresh_url, verify=False, headers=header)
+    assert response.ok
