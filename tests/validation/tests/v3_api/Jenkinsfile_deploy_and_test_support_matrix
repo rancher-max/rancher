@@ -137,6 +137,9 @@ node {
                 jobs = [:]
                 cluster_arr = env.RANCHER_CLUSTER_NAMES.split(",")
                 cluster_count = cluster_arr.size()
+                print("After split:")
+                print(cluster_arr)
+                print(cluster_count)
                 for (int i = 0; i < cluster_count; i++) {
                   def params = [
                     string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"),
