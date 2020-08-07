@@ -1,58 +1,40 @@
 from python_terraform import * # NOQA
 from .common import *  # NOQA
+from .test_import_rke2_cluster import (
+    RANCHER_REGION, RANCHER_VPC_ID, RANCHER_SUBNETS, RANCHER_AWS_SG,
+    RANCHER_AVAILABILITY_ZONE, RANCHER_AWS_AMI, RANCHER_AWS_USER, HOST_NAME, 
+    RANCHER_QA_SPACE, RANCHER_EC2_INSTANCE_CLASS)
 
-RANCHER_REGION = os.environ.get("AWS_REGION")
-RANCHER_VPC_ID = os.environ.get("AWS_VPC")
-RANCHER_SUBNETS = os.environ.get("AWS_SUBNET")
-RANCHER_AWS_SG = os.environ.get("AWS_SG")
-RANCHER_AVAILABILITY_ZONE = os.environ.get("AWS_AVAILABILITY_ZONE")
-RANCHER_AWS_AMI = os.environ.get("AWS_AMI", "")
-RANCHER_AWS_USER = os.environ.get("AWS_USER", "ubuntu")
-HOST_NAME = os.environ.get('RANCHER_HOST_NAME', "sa")
+RANCHER_RKE2_VERSION = os.environ.get("RANCHER_RKE2_VERSION", "")
+RANCHER_NO_OF_SERVER_NODES = \
+    os.environ.get("RANCHER_NO_OF_SERVER_NODES", 2)
+RANCHER_NO_OF_WORKER_NODES = \
+    os.environ.get("RANCHER_NO_OF_WORKER_NODES", 0)
+RANCHER_RKE2_SERVER_FLAGS = os.environ.get("RANCHER_RKE2_SERVER_FLAGS", "server")
+RANCHER_RKE2_WORKER_FLAGS = os.environ.get("RANCHER_RKE2_WORKER_FLAGS", "agent")
+RANCHER_RKE2_KUBECONFIG_PATH = DATA_SUBDIR + "/rke2_kubeconfig.yaml"
 
-RANCHER_K3S_VERSION = os.environ.get("RANCHER_K3S_VERSION", "")
-RANCHER_K3S_NO_OF_SERVER_NODES = \
-    os.environ.get("RANCHER_K3S_NO_OF_SERVER_NODES", 2)
-RANCHER_K3S_NO_OF_WORKER_NODES = \
-    os.environ.get("RANCHER_K3S_NO_OF_WORKER_NODES", 0)
-RANCHER_K3S_SERVER_FLAGS = os.environ.get("RANCHER_K3S_SERVER_FLAGS", "server")
-RANCHER_K3S_WORKER_FLAGS = os.environ.get("RANCHER_K3S_WORKER_FLAGS", "agent")
-RANCHER_QA_SPACE = os.environ.get("RANCHER_QA_SPACE", "qa.rancher.space.")
-RANCHER_EC2_INSTANCE_CLASS = os.environ.get("RANCHER_EC2_INSTANCE_CLASS",
-                                            "t3a.medium")
-
-RANCHER_EXTERNAL_DB = os.environ.get("RANCHER_EXTERNAL_DB", "mysql")
-RANCHER_DB_TYPE = os.environ.get("RANCHER_DB_TYPE")
-RANCHER_EXTERNAL_DB_VERSION = os.environ.get("RANCHER_EXTERNAL_DB_VERSION")
-RANCHER_DB_GROUP_NAME = os.environ.get("RANCHER_DB_GROUP_NAME")
-
-RANCHER_INSTANCE_CLASS = os.environ.get("RANCHER_INSTANCE_CLASS",
-                                        "db.t2.micro")
-RANCHER_DB_USERNAME = os.environ.get("RANCHER_DB_USERNAME", "adminuser")
-RANCHER_DB_PASSWORD = os.environ.get("RANCHER_DB_PASSWORD", "")
-RANCHER_K3S_KUBECONFIG_PATH = DATA_SUBDIR + "/k3s_kubeconfig.yaml"
-
-def test_create_k3s_single_control_cluster():
-    aws_nodes, client, k3s_clusterfilepath = create_single_control_cluster()
+def test_create_rke2_single_control_cluster():
+    aws_nodes, client, rke2_clusterfilepath = create_single_control_cluster()
 
 
-def test_create_k3s_multiple_control_cluster():
-    k3s_clusterfilepath = create_multiple_control_cluster()
+def test_create_rke2_multiple_control_cluster():
+    rke2_clusterfilepath = create_multiple_control_cluster()
 
 
-def test_import_k3s_single_control_cluster():
-    aws_nodes, client, k3s_clusterfilepath = create_single_control_cluster()
-    cluster = create_rancher_cluster(client, k3s_clusterfilepath)
+def test_import_rke2_single_control_cluster():
+    aws_nodes, client, rke2_clusterfilepath = create_single_control_cluster()
+    cluster = create_rancher_cluster(client, rke2_clusterfilepath)
     cluster_cleanup(client, cluster, aws_nodes)
 
 
-def test_import_k3s_multiple_control_cluster():
+def test_import_rke2_multiple_control_cluster():
     client = get_user_client()
-    k3s_clusterfilepath = create_multiple_control_cluster()
-    cluster = create_rancher_cluster(client, k3s_clusterfilepath)
+    rke2_clusterfilepath = create_multiple_control_cluster()
+    cluster = create_rancher_cluster(client, rke2_clusterfilepath)
 
 
-def test_delete_k3s():
+def test_delete_rke2():
     delete_resource_in_AWS_by_prefix(RANCHER_HOSTNAME_PREFIX)
 
 
@@ -62,42 +44,38 @@ def create_single_control_cluster():
     # Create nodes in AWS
     aws_nodes = create_nodes()
 
-    # Install k3s on master node
-    kubeconfig, node_token = install_k3s_master_node(aws_nodes[0])
+    # Install rke2 on server node
+    kubeconfig, node_token = install_rke2_master_node(aws_nodes[0])
 
-    # Join worker nodes
-    join_k3s_worker_nodes(aws_nodes[0], aws_nodes[1:], node_token)
-
-    # Verify cluster health
-    verify_cluster_health(aws_nodes[0])
+    # Join agent nodes -- if there are any
+    join_rke2_agent_nodes(aws_nodes[0], aws_nodes[1:], node_token)
 
     # Update master node IP in kubeconfig file
-    localhost = "127.0.0.1"
-    kubeconfig = kubeconfig.replace(localhost, aws_nodes[0].public_ip_address)
+    kubeconfig = kubeconfig.replace("127.0.0.1", aws_nodes[0].public_ip_address)
 
-    k3s_kubeconfig_file = "k3s_kubeconfig.yaml"
-    k3s_clusterfilepath = create_kube_config_file(kubeconfig, k3s_kubeconfig_file)
-    print(k3s_clusterfilepath)
+    rke2_kubeconfig_file = "rke2_kubeconfig.yaml"
+    rke2_clusterfilepath = create_kube_config_file(kubeconfig, rke2_kubeconfig_file)
+    print(rke2_clusterfilepath)
 
-    k3s_kubeconfig_file = "k3s_kubeconfig.yaml"
-    k3s_clusterfilepath = DATA_SUBDIR + "/" + k3s_kubeconfig_file
-    is_file = os.path.isfile(k3s_clusterfilepath)
+    rke2_kubeconfig_file = "rke2_kubeconfig.yaml"
+    rke2_clusterfilepath = DATA_SUBDIR + "/" + rke2_kubeconfig_file
+    is_file = os.path.isfile(rke2_clusterfilepath)
     assert is_file
-    with open(k3s_clusterfilepath, 'r') as f:
+    with open(rke2_clusterfilepath, 'r') as f:
         print(f.read())
-    return aws_nodes, client, k3s_clusterfilepath
+    return aws_nodes, client, rke2_clusterfilepath
 
 
 def create_multiple_control_cluster():
     global RANCHER_EXTERNAL_DB_VERSION
     global RANCHER_DB_GROUP_NAME
-    k3s_kubeconfig_file = "k3s_kubeconfig.yaml"
-    k3s_clusterfilepath = DATA_SUBDIR + "/" + k3s_kubeconfig_file
+    rke2_kubeconfig_file = "rke2_kubeconfig.yaml"
+    rke2_clusterfilepath = DATA_SUBDIR + "/" + rke2_kubeconfig_file
 
-    tf_dir = DATA_SUBDIR + "/" + "terraform/k3s/master"
+    tf_dir = DATA_SUBDIR + "/" + "terraform/rke2/master"
     keyPath = os.path.abspath('.') + '/.ssh/' + AWS_SSH_KEY_NAME
     os.chmod(keyPath, 0o400)
-    no_of_servers = int(RANCHER_K3S_NO_OF_SERVER_NODES)
+    no_of_servers = int(RANCHER_RKE2_NO_OF_SERVER_NODES)
     no_of_servers = no_of_servers - 1
 
     if RANCHER_EXTERNAL_DB == "MariaDB":
@@ -130,9 +108,9 @@ def create_multiple_control_cluster():
                               'ec2_instance_class': RANCHER_EC2_INSTANCE_CLASS,
                               'username': RANCHER_DB_USERNAME,
                               'password': RANCHER_DB_PASSWORD,
-                              'k3s_version': RANCHER_K3S_VERSION,
+                              'rke2_version': RANCHER_RKE2_VERSION,
                               'no_of_server_nodes': no_of_servers,
-                              'server_flags': RANCHER_K3S_SERVER_FLAGS,
+                              'server_flags': RANCHER_RKE2_SERVER_FLAGS,
                               'qa_space': RANCHER_QA_SPACE,
                               'db': RANCHER_DB_TYPE})
     print("Creating cluster")
@@ -141,8 +119,8 @@ def create_multiple_control_cluster():
     print("\n\n")
     print(tf.apply("--auto-approve"))
     print("\n\n")
-    if int(RANCHER_K3S_NO_OF_WORKER_NODES) > 0:
-        tf_dir = DATA_SUBDIR + "/" + "terraform/k3s/worker"
+    if int(RANCHER_RKE2_NO_OF_WORKER_NODES) > 0:
+        tf_dir = DATA_SUBDIR + "/" + "terraform/rke2/worker"
         tf = Terraform(working_dir=tf_dir,
                        variables={'region': RANCHER_REGION,
                                   'vpc_id': RANCHER_VPC_ID,
@@ -154,9 +132,9 @@ def create_multiple_control_cluster():
                                   'ec2_instance_class': RANCHER_EC2_INSTANCE_CLASS,
                                   'resource_name': RANCHER_HOSTNAME_PREFIX,
                                   'access_key': keyPath,
-                                  'k3s_version': RANCHER_K3S_VERSION,
-                                  'no_of_worker_nodes': int(RANCHER_K3S_NO_OF_WORKER_NODES),
-                                  'worker_flags': RANCHER_K3S_WORKER_FLAGS})
+                                  'rke2_version': RANCHER_RKE2_VERSION,
+                                  'no_of_worker_nodes': int(RANCHER_NO_OF_WORKER_NODES),
+                                  'worker_flags': RANCHER_RKE2_WORKER_FLAGS})
 
         print("Joining worker nodes")
         tf.init()
@@ -165,23 +143,23 @@ def create_multiple_control_cluster():
         print(tf.apply("--auto-approve"))
         print("\n\n")
 
-    cmd = "cp /tmp/multinode_kubeconfig1 " + k3s_clusterfilepath
+    cmd = "cp /tmp/multinode_kubeconfig1 " + rke2_clusterfilepath
     os.system(cmd)
-    is_file = os.path.isfile(k3s_clusterfilepath)
+    is_file = os.path.isfile(rke2_clusterfilepath)
     assert is_file
-    print(k3s_clusterfilepath)
-    with open(k3s_clusterfilepath, 'r') as f:
+    print(rke2_clusterfilepath)
+    with open(rke2_clusterfilepath, 'r') as f:
         print(f.read())
     print("K3s Cluster Created")
-    return k3s_clusterfilepath
+    return rke2_clusterfilepath
 
 
-def create_rancher_cluster(client, k3s_clusterfilepath):
-    clustername = random_test_name("testcustom-k3s")
+def create_rancher_cluster(client, rke2_clusterfilepath):
+    clustername = random_test_name("testcustom-rke2")
     cluster = client.create_cluster(name=clustername)
     cluster_token = create_custom_host_registration_token(client, cluster)
     command = cluster_token.insecureCommand
-    finalimportcommand = command + " --kubeconfig " + k3s_clusterfilepath
+    finalimportcommand = command + " --kubeconfig " + rke2_clusterfilepath
     print(finalimportcommand)
 
     result = run_command(finalimportcommand)
@@ -201,63 +179,57 @@ def create_rancher_cluster(client, k3s_clusterfilepath):
 def create_nodes():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            int(RANCHER_K3S_NO_OF_WORKER_NODES),
-            random_test_name("testcustom-k3s"+"-"+HOST_NAME))
-    assert len(aws_nodes) == int(RANCHER_K3S_NO_OF_WORKER_NODES)
+            int(RANCHER_RKE2_NO_OF_WORKER_NODES),
+            random_test_name("testcustom-rke2"+"-"+HOST_NAME))
+    assert len(aws_nodes) == int(RANCHER_RKE2_NO_OF_WORKER_NODES)
     for aws_node in aws_nodes:
         print("AWS NODE PUBLIC IP {}".format(aws_node.public_ip_address))
     return aws_nodes
 
 
-def install_k3s_master_node(master):
-    # Connect to the node and install k3s on master
-    print("K3s VERSION {}".format(RANCHER_K3S_VERSION))
-    cmd = "curl -sfL https://get.k3s.io | \
+def install_rke2_master_node(master):
+    # Connect to the node and install rke2 on master
+    print("K3s VERSION {}".format(RANCHER_RKE2_VERSION))
+    cmd = "curl -sfL https://get.rke2.io | \
      {} sh -s - server --node-external-ip {}".\
-        format("INSTALL_K3S_VERSION={}".format(RANCHER_K3S_VERSION) if RANCHER_K3S_VERSION else "", master.public_ip_address)
+        format("INSTALL_RKE2_VERSION={}".format(RANCHER_RKE2_VERSION) if RANCHER_RKE2_VERSION else "", master.public_ip_address)
     print("Master Install {}".format(cmd))
     install_result = master.execute_command(cmd)
     print(install_result)
 
     # Get node token from master
-    cmd = "sudo cat /var/lib/rancher/k3s/server/node-token"
+    cmd = "sudo cat /var/lib/rancher/rke2/server/node-token"
     print(cmd)
     node_token = master.execute_command(cmd)
     print(node_token)
 
     # Get kube_config from master
-    cmd = "sudo cat /etc/rancher/k3s/k3s.yaml"
+    cmd = "sudo cat /etc/rancher/rke2/rke2.yaml"
     kubeconfig = master.execute_command(cmd)
     print(kubeconfig)
-    print("NO OF WORKER NODES: {}".format(RANCHER_K3S_NO_OF_WORKER_NODES))
+    print("NO OF WORKER NODES: {}".format(RANCHER_RKE2_NO_OF_WORKER_NODES))
     print("NODE TOKEN: \n{}".format(node_token))
     print("KUBECONFIG: \n{}".format(kubeconfig))
 
     return kubeconfig[0].strip("\n"), node_token[0].strip("\n")
 
 
-def join_k3s_worker_nodes(master, workers, node_token):
+def join_rke2_agent_nodes(master, workers, node_token):
     for worker in workers:
-        cmd = "curl -sfL https://get.k3s.io | \
-             {} K3S_URL=https://{}:6443 K3S_TOKEN={} sh -s - ". \
-            format("INSTALL_K3S_VERSION={}".format(RANCHER_K3S_VERSION) \
-                       if RANCHER_K3S_VERSION else "", master.public_ip_address, node_token)
+        cmd = "curl -sfL https://get.rke2.io | \
+             {} RKE2_URL=https://{}:6443 RKE2_TOKEN={} sh -s - ". \
+            format("INSTALL_RKE2_VERSION={}".format(RANCHER_RKE2_VERSION) \
+                       if RANCHER_RKE2_VERSION else "", master.public_ip_address, node_token)
         cmd = cmd + " {} {}".format("--node-external-ip", worker.public_ip_address)
-        print("Joining k3s master")
+        print("Joining rke2 master")
         print(cmd)
         install_result = worker.execute_command(cmd)
         print(install_result)
 
 
-def verify_cluster_health(master):
-    cmd = "sudo k3s kubectl get nodes"
-    install_result = master.execute_command(cmd)
-    print(install_result)
-
-
-def create_kube_config_file(kubeconfig, k3s_kubeconfig_file):
-    k3s_clusterfilepath = DATA_SUBDIR + "/" + k3s_kubeconfig_file
-    f = open(k3s_clusterfilepath, "w")
+def create_kube_config_file(kubeconfig, rke2_kubeconfig_file):
+    rke2_clusterfilepath = DATA_SUBDIR + "/" + rke2_kubeconfig_file
+    f = open(rke2_clusterfilepath, "w")
     f.write(kubeconfig)
     f.close()
-    return k3s_clusterfilepath
+    return rke2_clusterfilepath
