@@ -91,8 +91,7 @@ def create_rke2_multiple_control_cluster(cluster_type, cluster_version):
     keyPath = os.path.abspath('.') + '/.ssh/' + AWS_SSH_KEY_NAME
     os.chmod(keyPath, 0o400)
 
-    split_roles = str(RKE2_SPLIT_ROLES).lower()
-    if split_roles == "true":
+    if str(RKE2_SPLIT_ROLES).lower() == "true":
         no_of_servers = int(RANCHER_RKE2_NO_OF_SERVER_NODES) + \
             int(RKE2_ETCD_ONLY_NODES) + int(RKE2_ETCD_CP_NODES) + \
             int(RKE2_ETCD_WORKER_NODES) + int(RKE2_CP_ONLY_NODES) + \
@@ -126,7 +125,7 @@ def create_rke2_multiple_control_cluster(cluster_type, cluster_version):
                               'iam_role': RANCHER_IAM_ROLE,
                               'volume_size': AWS_VOLUME_SIZE,
                               'create_lb': str(RKE2_CREATE_LB).lower(),
-                              'split_roles': split_roles,
+                              'split_roles': str(RKE2_SPLIT_ROLES).lower(),
                               'all_role_nodes': RANCHER_RKE2_NO_OF_SERVER_NODES,
                               'etcd_only_nodes': RKE2_ETCD_ONLY_NODES,
                               'etcd_cp_nodes': RKE2_ETCD_CP_NODES,
