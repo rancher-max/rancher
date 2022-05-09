@@ -8,7 +8,7 @@ if [ $# != 8 ]; then
   exit 1
 fi
 
-let node_index=$1+1
+(( node_index=$1+1 ))
 role_order=$2
 all_role_nodes=$3
 etcd_only_nodes=$4
@@ -18,51 +18,51 @@ cp_only_nodes=$7
 cp_worker_nodes=$8
 
 # Set the desired role into an array based on the index
-order_array=($(echo "$role_order" | tr ',' '\n'))
+IFS="," read -r -a order_array <<< "$role_order"
 role_array=()
 for order_num in "${order_array[@]}"
 do
   if [[ "$order_num" = "1" ]]
   then
-    until [ $all_role_nodes -le "0" ]
+    until [ "$all_role_nodes" -le "0" ]
     do
        role_array+=("all-roles")
-       let "all_role_nodes-=1"
+       (( "all_role_nodes-=1" ))
     done
   elif [[ "$order_num" = "2" ]]
   then
-    until [ $etcd_only_nodes -le "0" ]
+    until [ "$etcd_only_nodes" -le "0" ]
     do
        role_array+=("etcd-only")
-       let "etcd_only_nodes-=1"
+       (( "etcd_only_nodes-=1" ))
     done
   elif [[ "$order_num" = "3" ]]
   then
-    until [ $etcd_cp_nodes -le "0" ]
+    until [ "$etcd_cp_nodes" -le "0" ]
     do
        role_array+=("etcd-cp")
-       let "etcd_cp_nodes-=1"
+       (( "etcd_cp_nodes-=1" ))
     done
   elif [[ "$order_num" = "4" ]]
   then
-    until [ $etcd_worker_nodes -le "0" ]
+    until [ "$etcd_worker_nodes" -le "0" ]
     do
        role_array+=("etcd-worker")
-       let "etcd_worker_nodes-=1"
+       (( "etcd_worker_nodes-=1" ))
     done
   elif [[ "$order_num" = "5" ]]
   then
-    until [ $cp_only_nodes -le "0" ]
+    until [ "$cp_only_nodes" -le "0" ]
     do
        role_array+=("cp-only")
-       let "cp_only_nodes-=1"
+       (( "cp_only_nodes-=1" ))
     done
   elif [[ "$order_num" = "6" ]]
   then
-    until [ $cp_worker_nodes -le "0" ]
+    until [ "$cp_worker_nodes" -le "0" ]
     do
        role_array+=("cp-worker")
-       let "cp_worker_nodes-=1"
+       (( "cp_worker_nodes-=1" ))
     done
   fi
 done
