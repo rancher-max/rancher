@@ -1,36 +1,55 @@
 #!/bin/bash
 echo "$@"
 
+if [ $# != 11 ]; then
+  echo "Usage: install_k3s_master.sh node_os dns install_mode k3s_version cluster_type public_ip datastore_endpoint server_flags rhel_username rhel_password channel"
+  exit 1
+fi
+
+node_os="$1"
+dns="$2"
+install_mode="$3"
+k3s_version="$4"
+cluster_type="$5"
+public_ip="$6"
+datastore_endpoint="$7"
+server_flags="$8"
+rhel_username="$9"
+rhel_password="${10}"
+channel="${11}"
+
 mkdir -p /etc/rancher/k3s
 mkdir -p /var/lib/rancher/k3s/server/logs
 token=$(openssl rand -base64 21)
-cat << EOF >/etc/rancher/k3s/config.yaml
+cat << EOF > /etc/rancher/k3s/config.yaml
 write-kubeconfig-mode: "0644"
 tls-san:
-  - ${2}
+  - $dns
 token: ${token}
 EOF
 
-if [[ -n "${8}" ]] && [[ "${8}" == *":"* ]]
+if [[ -n "$server_flags" ]] && [[ "$server_flags" == *":"* ]]
 then
    echo "$"
    echo -e "$8" >> /etc/rancher/k3s/config.yaml
    cat /etc/rancher/k3s/config.yaml
 fi
 
-if [[ -n "${8}" ]] && [[ "${8}" == *"protect-kernel-defaults"* ]]
+if [[ -n "$server_flags" ]] && [[ "$server_flags" == *"protect-kernel-defaults"* ]]
 then
   cat /tmp/cis_masterconfig.yaml >> /etc/rancher/k3s/config.yaml
-  echo -e "vm.panic_on_oom=0" >>/etc/sysctl.d/90-kubelet.conf
-  echo -e "vm.overcommit_memory=1" >>/etc/sysctl.d/90-kubelet.conf
-  echo -e "kernel.panic=10" >>/etc/sysctl.d/90-kubelet.conf
-  echo -e "kernel.panic_on_oops=1" >>/etc/sysctl.d/90-kubelet.conf
+  cat <<-EOF > /etc/sysctl.d/90-kubelet.conf
+vm.panic_on_oom=0
+vm.overcommit_memory=1
+kernel.panic=10
+kernel.panic_on_oops=1
+EOF
   sysctl -p /etc/sysctl.d/90-kubelet.conf
   systemctl restart systemd-sysctl
   mkdir -p /var/lib/rancher/k3s/server/manifests
   cat /tmp/policy.yaml > /var/lib/rancher/k3s/server/manifests/policy.yaml
 
-  if [[ "${4}" == *"v1.18"* ]] || [[ "${4}" == *"v1.19"* ]] || [[ "${4}" == *"v1.20"* ]]
+  if [[ "$k3s_version" == *"v1.18"* ]] || [[ "$k3s_version" == *"v1.19"* ]] || [[ "$k3s_version" == *"v1.20"* ]]
   then
     cat /tmp/v120ingresspolicy.yaml > /var/lib/rancher/k3s/server/manifests/v120ingresspolicy.yaml
   else
@@ -39,64 +58,66 @@ then
 fi
 
 
-if [[ "${8}" == *"traefik"* ]]
+if [[ "$server_flags" == *"traefik"* ]]
 then
    mkdir -p /var/lib/rancher/k3s/server/manifests
-   cat /tmp/nginx-ingress.yaml> /var/lib/rancher/k3s/server/manifests/nginx-ingress.yaml
+   cat /tmp/nginx-ingress.yaml > /var/lib/rancher/k3s/server/manifests/nginx-ingress.yaml
 fi
 
-if [ "${1}" = "rhel" ]
+if [ "$node_os" = "rhel" ]
 then
-   subscription-manager register --auto-attach --username="${9}" --password="${10}"
+   subscription-manager register --auto-attach --username="$rhel_username" --password="$rhel_password"
    subscription-manager repos --enable=rhel-7-server-extras-rpms
 fi
 
-export "${3}"="${4}"
+export "$install_mode"="$k3s_version"
 
-if [ "${5}" = "etcd" ]
+if [ "$cluster_type" = "etcd" ]
 then
    echo "CLUSTER TYPE  is etcd"
-   if [[ "${4}" == *"v1.18"* ]] || [[ "${4}" == *"v1.17"* ]] && [[ -n "${8}" ]]
+   if [[ "$k3s_version" == *"v1.18"* ]] || [[ "$k3s_version" == *"v1.17"* ]] && [[ -n "$server_flags" ]]
    then
-       curl -sfL https://get.k3s.io | INSTALL_K3S_TYPE='server' sh -s - server --cluster-init --node-external-ip="${6}" ${8} --tls-san "${2}" --write-kubeconfig-mode "0644"
+       curl -sfL https://get.k3s.io | INSTALL_K3S_TYPE='server' sh -s - server --cluster-init --node-external-ip="$public_ip" "$server_flags" --tls-san "$dns" --write-kubeconfig-mode "0644"
    else
-       if [ ${11} != "null" ]
+       if [ "$channel" != "null" ]
        then
-           curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=${11} INSTALL_K3S_TYPE='server' sh -s - server --cluster-init --node-external-ip="${6}"
+           curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL="$channel" INSTALL_K3S_TYPE='server' sh -s - server --cluster-init --node-external-ip="$public_ip"
        else
-           curl -sfL https://get.k3s.io | INSTALL_K3S_TYPE='server' sh -s - server --cluster-init --node-external-ip="${6}"
+           curl -sfL https://get.k3s.io | INSTALL_K3S_TYPE='server' sh -s - server --cluster-init --node-external-ip="$public_ip"
        fi
    fi
 else
   echo "CLUSTER TYPE is external db"
-  if [[ "${4}" == *"v1.18"* ]] || [[ "${4}" == *"v1.17"* ]] && [[ -n "${8}" ]]
+  if [[ "$k3s_version" == *"v1.18"* ]] || [[ "$k3s_version" == *"v1.17"* ]] && [[ -n "$server_flags" ]]
   then
-      curl -sfL https://get.k3s.io | sh -s - server --node-external-ip="${6}" --datastore-endpoint="${7}" ${8} --tls-san "${2}" --write-kubeconfig-mode "0644"
+      curl -sfL https://get.k3s.io | sh -s - server --node-external-ip="$public_ip" --datastore-endpoint="$datastore_endpoint" "$server_flags" --tls-san "$dns" --write-kubeconfig-mode "0644"
   else
-      if [ ${11} != "null" ]
+      if [ "$channel" != "null" ]
       then
-          curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=${11} sh -s - server --node-external-ip="${6}" --datastore-endpoint="${7}"
+          curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL="$channel" sh -s - server --node-external-ip="$public_ip" --datastore-endpoint="$datastore_endpoint"
       else
-          curl -sfL https://get.k3s.io | sh -s - server --node-external-ip="${6}" --datastore-endpoint="${7}"
+          curl -sfL https://get.k3s.io | sh -s - server --node-external-ip="$public_ip" --datastore-endpoint="$datastore_endpoint"
       fi
   fi
 fi
 
 export PATH=$PATH:/usr/local/bin
 timeElapsed=0
-while ! $(kubectl get nodes >/dev/null 2>&1) && [[ $timeElapsed -lt 300 ]]
+kGetNodes="kubectl get nodes > /dev/null 2>&1"
+while ! eval "$kGetNodes" && [[ "$timeElapsed" -lt 300 ]]
 do
    sleep 5
-   timeElapsed=$(expr $timeElapsed + 5)
+   timeElapsed=$(("$timeElapsed" + 5))
 done
 
 IFS=$'\n'
 timeElapsed=0
 sleep 10
-while [[ $timeElapsed -lt 420 ]]
+kGetNodes="kubectl get nodes"
+while [[ "$timeElapsed" -lt 420 ]]
 do
    notready=false
-   for rec in $(kubectl get nodes)
+   for rec in eval "$kGetNodes"
    do
       if [[ "$rec" == *"NotReady"* ]]
       then
@@ -108,16 +129,17 @@ do
      break
   fi
   sleep 20
-  timeElapsed=$(expr $timeElapsed + 20)
+  timeElapsed+=20
 done
 
 IFS=$'\n'
 timeElapsed=0
+kGetPods="kubectl get pods -A --no-headers"
 while [[ $timeElapsed -lt 420 ]]
 do
    helmPodsNR=false
    systemPodsNR=false
-   for rec in $(kubectl get pods -A --no-headers)
+   for rec in eval "$kGetPods"
    do
       if [[ "$rec" == *"helm-install"* ]] && [[ "$rec" != *"Completed"* ]]
       then
@@ -135,7 +157,7 @@ do
       break
    fi
    sleep 20
-   timeElapsed=$(expr $timeElapsed + 20)
+   timeElapsed+=20
 done
 cat /etc/rancher/k3s/config.yaml> /tmp/joinflags
 cat /var/lib/rancher/k3s/server/node-token >/tmp/nodetoken
