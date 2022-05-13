@@ -1,13 +1,32 @@
 #!/bin/bash
 # This script is used to join one or more nodes as masters to the first master
-set -x
 echo $@
+
+if [ $# != 11 ]; then
+  echo "Usage: join_rke2_master.sh node_os dns install_mode rke2_version cluster_type public_ip bootstrap_node_ip token datastore_endpoint server_flags rhel_username rhel_password channel"
+  exit 1
+fi
+
+node_os="$1"
+dns="$2"
+install_mode="$3"
+rke2_version="$4"
+cluster_type="$5"
+public_ip="$6"
+bootstrap_node_ip="$7"
+token="$8"
+datastore_endpoint="$9"
+server_flags="${10}"
+rhel_username="${11}"
+rhel_password="${12}"
+channel="${13}"
+
 hostname=`hostname -f`
 mkdir -p /etc/rancher/rke2
 cat <<EOF >>/etc/rancher/rke2/config.yaml
 write-kubeconfig-mode: "0644"
 tls-san:
-  - ${2}
+  - $dns
 server: https://${3}:9345
 token:  "${4}"
 node-name: "${hostname}"
@@ -26,13 +45,13 @@ else
   echo -e "node-external-ip: ${6}" >> /etc/rancher/rke2/config.yaml
 fi
 
-if [[ ${1} = "rhel" ]]
+if [[ $node_os = "rhel" ]]
 then
    subscription-manager register --auto-attach --username=${11} --password=${12}
    subscription-manager repos --enable=rhel-7-server-extras-rpms
 fi
 
-if [ ${1} = "centos8" ] || [ ${1} = "rhel8" ]
+if [ $node_os = "centos8" ] || [ ${1} = "rhel8" ]
 then
   yum install tar -y
   yum install iptables -y
