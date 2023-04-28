@@ -77,7 +77,7 @@ resource "aws_instance" "master" {
   }
 
   provisioner "file" {
-    source      = "optional_write_files.sh"
+    source      = "../../scripts/optional_write_files.sh"
     destination = "/tmp/optional_write_files.sh"
   }
   provisioner "remote-exec" {
@@ -188,7 +188,7 @@ resource "aws_instance" "master2-ha" {
     Name                 = "${var.resource_name}-servers"
   }
   provisioner "file" {
-    source      = "optional_write_files.sh"
+    source      = "../../scripts/optional_write_files.sh"
     destination = "/tmp/optional_write_files.sh"
   }
   provisioner "remote-exec" {

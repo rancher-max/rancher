@@ -21,7 +21,7 @@ resource "aws_instance" "master" {
     "kubernetes.io/cluster/clusterid" = "owned"
   }
   provisioner "file" {
-    source      = "optional_write_files.sh"
+    source      = "../../scripts/optional_write_files.sh"
     destination = "/tmp/optional_write_files.sh"
   }
   provisioner "remote-exec" {
@@ -92,7 +92,7 @@ resource "aws_instance" "master2" {
   }
   depends_on       = ["aws_instance.master"]
   provisioner "file" {
-    source      = "optional_write_files.sh"
+    source      = "../../scripts/optional_write_files.sh"
     destination = "/tmp/optional_write_files.sh"
   }
   provisioner "remote-exec" {
